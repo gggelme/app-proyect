@@ -1,12 +1,24 @@
+# database/repositorio_alumno.py
 from database.connection import get_connection
 from models.persona import Alumno
 
+class ErrorGuardarAlumno(Exception):
+    """Excepción personalizada para errores al guardar alumno"""
+    pass
+
 def guardar_alumno(alumno: Alumno): 
     conn = get_connection()
-    if not conn: return None
+    if not conn:
+        raise ErrorGuardarAlumno("No se pudo conectar a la base de datos")
     
     try:
         cur = conn.cursor()
+        
+        # Verificar si el DNI ya existe
+        cur.execute("SELECT id FROM PERSONA WHERE dni = %s", (alumno.dni,))
+        if cur.fetchone():
+            raise ErrorGuardarAlumno(f"Ya existe una persona con DNI {alumno.dni}")
+        
         # 1. Insertar en PERSONA
         query_persona = """
             INSERT INTO PERSONA (dni, nombre_apellido, fecha_nac, domicilio, telefono, fecha_ingreso)
@@ -28,6 +40,13 @@ def guardar_alumno(alumno: Alumno):
         return persona_id
         
     except Exception as e:
-        if conn: conn.rollback()
-        print(f"❌ Error al guardar alumno: {e}")
-        return None
+        if conn: 
+            conn.rollback()
+            conn.close()
+        
+        if "duplicate key" in str(e).lower():
+            raise ErrorGuardarAlumno(f"Ya existe un alumno con esos datos: {str(e)}")
+        elif "not null" in str(e).lower():
+            raise ErrorGuardarAlumno(f"Falta un campo obligatorio: {str(e)}")
+        else:
+            raise ErrorGuardarAlumno(f"Error en la base de datos: {str(e)}")
