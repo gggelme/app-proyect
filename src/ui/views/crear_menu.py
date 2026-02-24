@@ -1,28 +1,28 @@
+# src/ui/views/crear_menu.py
 import flet as ft
 
 class CrearMenuView:
     def __init__(self, page, on_volver_callback, 
-                 on_crear_alumno, on_crear_profesor, 
-                 on_crear_aula, on_crear_instrumento):
+                 on_nuevo_alumno, on_nuevo_profesor, 
+                 on_nueva_cuota):  # <--- Solo 3 callbacks
         self.page = page
         self.on_volver_callback = on_volver_callback
-        self.on_crear_alumno = on_crear_alumno
-        self.on_crear_profesor = on_crear_profesor
-        self.on_crear_aula = on_crear_aula
-        self.on_crear_instrumento = on_crear_instrumento
+        self.on_nuevo_alumno = on_nuevo_alumno
+        self.on_nuevo_profesor = on_nuevo_profesor
+        self.on_nueva_cuota = on_nueva_cuota
     
     def build(self):
-        """Construye el submenú de creación"""
+        """Construye el menú para elegir qué crear"""
         
         contenido = ft.Column(
             [
                 ft.Text("¿QUÉ DESEA CREAR?", size=26, weight=ft.FontWeight.BOLD, color="white"),
                 ft.Container(height=20),
                 
-                # Las 4 opciones de creación
+                # 3 botones para las opciones de creación
                 ft.ElevatedButton(
-                    "👤 CREAR ALUMNO",
-                    on_click=self.on_crear_alumno,
+                    "👤 NUEVO ALUMNO",
+                    on_click=self.on_nuevo_alumno,
                     width=250,
                     style=ft.ButtonStyle(
                         color="white",
@@ -31,8 +31,8 @@ class CrearMenuView:
                     ),
                 ),
                 ft.ElevatedButton(
-                    "👨‍🏫 CREAR PROFESOR",
-                    on_click=self.on_crear_profesor,
+                    "👨‍🏫 NUEVO PROFESOR",
+                    on_click=self.on_nuevo_profesor,
                     width=250,
                     style=ft.ButtonStyle(
                         color="white",
@@ -41,18 +41,8 @@ class CrearMenuView:
                     ),
                 ),
                 ft.ElevatedButton(
-                    "🏫 CREAR AULA",
-                    on_click=self.on_crear_aula,
-                    width=250,
-                    style=ft.ButtonStyle(
-                        color="white",
-                        bgcolor="#2E7D32",  # Verde
-                        padding=15,
-                    ),
-                ),
-                ft.ElevatedButton(
-                    "🎸 CREAR INSTRUMENTO",
-                    on_click=self.on_crear_instrumento,
+                    "💰 NUEVA CUOTA",
+                    on_click=self.on_nueva_cuota,
                     width=250,
                     style=ft.ButtonStyle(
                         color="white",
@@ -62,14 +52,17 @@ class CrearMenuView:
                 ),
                 
                 ft.Container(height=20),
+                
+                # Botón para volver
                 ft.ElevatedButton(
-                    "← Volver al menú",
+                    "← Volver al menú principal",
                     on_click=self.on_volver_callback,
-                    width=200,
+                    width=250,
                 ),
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=10,
+            scroll=ft.ScrollMode.AUTO,
         )
         
         # Tarjeta contenedora
@@ -78,7 +71,7 @@ class CrearMenuView:
             bgcolor="#1E88E5",  # Azul
             padding=40,
             border_radius=20,
-            width=400,
+            width=450,
         )
         
         return tarjeta

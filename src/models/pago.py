@@ -1,12 +1,15 @@
+# src/models/pago.py
 from dataclasses import dataclass
-from datetime import date
 from typing import Optional
+from datetime import datetime, date
+from decimal import Decimal
 
 @dataclass
 class Pago:
-    id_alumno: int      # Parte de la FK compuesta
-    id_instrumento: int # Parte de la FK compuesta
-    fecha_vencimiento: date
-    estado: str = "PENDIENTE"
-    fecha_pago: Optional[date] = None
-    id: Optional[int] = None
+    id_alumno_cuota: int
+    mes_correspondiente: date           # Sin default, va primero
+    monto: Decimal                       # Sin default, va segundo
+    fecha_pago: Optional[datetime] = None  # Con default, va después
+    pagado_bool: bool = False             # Con default
+    metodo_pago: Optional[str] = None     # Con default
+    id: Optional[int] = None              # Con default

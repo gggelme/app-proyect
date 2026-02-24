@@ -1,24 +1,24 @@
+# src/models/persona.py
 from dataclasses import dataclass
-from datetime import date
 from typing import Optional
+from datetime import date, datetime
 
 @dataclass
 class Persona:
     dni: str
-    nombre_apellido: str
-    fecha_nac: date
-    telefono: str
-    fecha_ingreso: date
+    nomb_apel: str
+    fecha_nac: Optional[date] = None
     domicilio: Optional[str] = None
+    telefono: Optional[str] = None
+    fecha_registro: Optional[datetime] = None
     id: Optional[int] = None
 
 @dataclass
 class Alumno(Persona):
-    # Por ahora Alumno no tiene campos extra en la base de datos, 
-    # pero hereda todo lo de Persona.
-    pass
+    fecha_ing: Optional[date] = None
+    estado_activo: bool = True
 
 @dataclass
 class Profesor(Persona):
-    # Sumamos el atributo específico de la tabla PROFESOR
-    alias_mp: Optional[str] = None
+    alias: Optional[str] = None
+    email: Optional[str] = None

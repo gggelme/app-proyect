@@ -1,12 +1,10 @@
+# src/models/clase.py
 from dataclasses import dataclass
 from typing import Optional
 
 @dataclass
 class Clase:
-    nombre_materia: str  # <--- Agregado
+    nombre_clase: str
     id_profesor: int
-    id_habitacion: int
-    dia_semana: str
-    hora_inicio: str
-    hora_fin: str
+    duracion: Optional[int] = None
     id: Optional[int] = None

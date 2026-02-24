@@ -31,6 +31,7 @@ class MenuView:
             ],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=10,
+            scroll=ft.ScrollMode.AUTO
         )
         
         tarjeta_menu = ft.Container(

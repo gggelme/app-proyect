@@ -1,8 +1,10 @@
+# src/models/cuota.py
 from dataclasses import dataclass
 from typing import Optional
+from decimal import Decimal
 
 @dataclass
-class Instrumento:
+class Cuota:
     nombre: str
-    precio_hora: float  
+    precio_cuota: Decimal
     id: Optional[int] = None
