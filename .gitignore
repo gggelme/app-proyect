@@ -1,0 +1,20 @@
+# --- BACKEND (Python) ---
+back/.venv/
+back/venv/
+back/env/
+**/__pycache__/
+*.py[cod]
+back/.env
+
+# --- FRONTEND (Flutter) ---
+front/.dart_tool/
+front/.flutter-plugins
+front/.flutter-plugins-dependencies
+front/.pub-cache/
+front/.packages
+front/build/
+front/ios/.generated_files/
+
+# --- GENERAL ---
+.vscode/
+.DS_Store
