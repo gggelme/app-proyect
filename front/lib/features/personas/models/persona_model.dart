@@ -4,6 +4,7 @@ class AlumnoModel {
   final String dni;
   final String nombApel;
   final String? telefono;
+  final String? fechaNac;
   final String? fechaIng;
   final bool estadoActivo;
 
@@ -13,6 +14,7 @@ class AlumnoModel {
     required this.dni,
     required this.nombApel,
     this.telefono,
+    this.fechaNac,
     this.fechaIng,
     required this.estadoActivo,
   });
@@ -24,6 +26,7 @@ class AlumnoModel {
       dni: json['dni'] ?? '',
       nombApel: json['nomb_apel'] ?? '',
       telefono: json['telefono'],
+      fechaNac: json['fecha_nac'],
       fechaIng: json['fecha_ing'],
       estadoActivo: json['estado_activo'] ?? true,
     );
@@ -36,6 +39,7 @@ class ProfesorModel {
   final String dni;
   final String nombApel;
   final String? telefono;
+  final String? fechaNac;
   final String? alias;
   final String? email;
 
@@ -45,6 +49,7 @@ class ProfesorModel {
     required this.dni,
     required this.nombApel,
     this.telefono,
+    this.fechaNac,
     this.alias,
     this.email,
   });
@@ -56,6 +61,7 @@ class ProfesorModel {
       dni: json['dni'] ?? '',
       nombApel: json['nomb_apel'] ?? '',
       telefono: json['telefono'],
+      fechaNac: json['fecha_nac'],
       alias: json['alias'],
       email: json['email'],
     );

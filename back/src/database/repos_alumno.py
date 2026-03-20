@@ -10,8 +10,7 @@ class ErrorGuardarAlumno(Exception):
 def guardar_alumno(alumno: Alumno) -> int:
     """
     Guarda un alumno en la base de datos.
-    Primero inserta en PERSONA, luego en ALUMNO.
-    Retorna el ID generado.
+    Retorna el ID de ALUMNO (no el de persona).
     """
     conn = get_connection()
     if not conn:
@@ -38,65 +37,82 @@ def guardar_alumno(alumno: Alumno) -> int:
             alumno.telefono
         ))
         persona_id = cur.fetchone()[0]
+        print(f"   Persona creada con ID: {persona_id}")
         
-        # 2. Insertar en ALUMNO (con los nuevos campos)
+        # 2. Insertar en ALUMNO y obtener el ID de ALUMNO
         query_alumno = """
             INSERT INTO alumno (id_persona, fecha_ing, estado_activo)
-            VALUES (%s, %s, %s);
+            VALUES (%s, %s, %s) RETURNING id;
         """
         cur.execute(query_alumno, (
             persona_id, 
             alumno.fecha_ing,
             alumno.estado_activo
         ))
-
+        
+        alumno_id = cur.fetchone()[0]  # Este es el ID de la tabla alumno
+        print(f"   Alumno creado con ID: {alumno_id} (persona_id: {persona_id})")
+        
         conn.commit()
         cur.close()
         conn.close()
         
-        print(f"✅ Alumno guardado correctamente con ID: {persona_id}")
-        return persona_id
+        print(f"✅ Retornando ID de alumno: {alumno_id}")
+        return alumno_id  # Retorna el ID de alumno, no de persona
         
     except Exception as e:
         if conn: 
             conn.rollback()
             conn.close()
-        
-        if "duplicate key" in str(e).lower():
-            raise ErrorGuardarAlumno(f"Ya existe un alumno con esos datos: {str(e)}")
-        elif "not null" in str(e).lower():
-            raise ErrorGuardarAlumno(f"Falta un campo obligatorio: {str(e)}")
-        else:
-            raise ErrorGuardarAlumno(f"Error en la base de datos: {str(e)}")
-
-def buscar_alumnos(texto_busqueda: str) -> List[Dict]:
+        raise ErrorGuardarAlumno(f"Error en la base de datos: {str(e)}")
+def buscar_alumnos(texto_busqueda: str = "") -> List[Dict]:
     conn = get_connection()
     alumnos = []
     
     try:
         cur = conn.cursor()
-        query = """
-            SELECT 
-                a.id as alumno_id,  -- <--- ESTE ES EL ID DE ALUMNO
-                p.id as persona_id, -- <--- ESTE ES EL ID DE PERSONA
-                p.dni, 
-                p.nomb_apel,
-                p.telefono,
-                a.fecha_ing,
-                a.estado_activo
-            FROM persona p
-            JOIN alumno a ON p.id = a.id_persona
-            WHERE p.dni ILIKE %s OR p.nomb_apel ILIKE %s
-            ORDER BY p.nomb_apel
-            LIMIT 20
-        """
-        search_pattern = f'%{texto_busqueda}%'
-        cur.execute(query, (search_pattern, search_pattern))
+        
+        if texto_busqueda and texto_busqueda.strip():
+            # Si hay texto de búsqueda, filtrar
+            query = """
+                SELECT 
+                    a.id as alumno_id,
+                    p.id as persona_id,
+                    p.dni, 
+                    p.nomb_apel,
+                    p.telefono,
+                    a.fecha_ing,
+                    a.estado_activo
+                FROM persona p
+                JOIN alumno a ON p.id = a.id_persona
+                WHERE p.dni ILIKE %s OR p.nomb_apel ILIKE %s
+                ORDER BY p.nomb_apel
+                LIMIT 50
+            """
+            search_pattern = f'%{texto_busqueda}%'
+            cur.execute(query, (search_pattern, search_pattern))
+        else:
+            # Si no hay texto, traer todos
+            query = """
+                SELECT 
+                    a.id as alumno_id,
+                    p.id as persona_id,
+                    p.dni, 
+                    p.nomb_apel,
+                    p.telefono,
+                    a.fecha_ing,
+                    a.estado_activo
+                FROM persona p
+                JOIN alumno a ON p.id = a.id_persona
+                ORDER BY p.nomb_apel
+                LIMIT 100
+            """
+            cur.execute(query)
         
         for row in cur.fetchall():
             alumnos.append({
-                'id': row[0],  # <--- ALUMNO_ID (el que necesitás para relaciones)
-                'persona_id': row[1],  # <--- PERSONA_ID
+                'id': row[0],
+                'persona_id': row[1],
                 'dni': row[2],
                 'nomb_apel': row[3],
                 'telefono': row[4],
@@ -104,99 +120,79 @@ def buscar_alumnos(texto_busqueda: str) -> List[Dict]:
                 'estado_activo': row[6]
             })
         
+        cur.close()
+        conn.close()
         return alumnos
+        
     except Exception as e:
         print(f"Error al buscar alumnos: {e}")
         return []
 
-def obtener_alumno_completo(id_alumno: int) -> Optional[Dict]:
-    """
-    Obtiene todos los datos de un alumno específico (para usar después)
-    """
-    conn = get_connection()
-    
-    if not conn:
-        return None
-    
-    try:
-        cur = conn.cursor()
-        query = """
-            SELECT 
-                p.id,
-                p.dni, 
-                p.nomb_apel,
-                p.fecha_nac,
-                p.domicilio,
-                p.telefono,
-                p.fecha_registro,
-                a.fecha_ing,
-                a.estado_activo
-            FROM persona p
-            JOIN alumno a ON p.id = a.id_persona
-            WHERE p.id = %s
-        """
-        cur.execute(query, (id_alumno,))
-        row = cur.fetchone()
-        
-        if row:
-            alumno = {
-                'id': row[0],
-                'dni': row[1],
-                'nomb_apel': row[2],
-                'fecha_nac': row[3],
-                'domicilio': row[4],
-                'telefono': row[5],
-                'fecha_registro': row[6],
-                'fecha_ing': row[7],
-                'estado_activo': row[8]
-            }
-        else:
-            alumno = None
-        
-        cur.close()
-        conn.close()
-        return alumno
-        
-    except Exception as e:
-        print(f"❌ Error al obtener alumno completo: {e}")
-        return None
 
-def obtener_todos_alumnos() -> List[Dict]:
+def buscar_por_nombre(self, query):
+    cursor = self.conn.cursor()
+    cursor.execute("""
+        SELECT id, nombre, apellido, dni 
+        FROM alumnos 
+        WHERE activo = 1 
+          AND (LOWER(nombre) LIKE LOWER(?) OR LOWER(apellido) LIKE LOWER(?))
+        ORDER BY apellido, nombre
+        LIMIT 10
+    """, (f'%{query}%', f'%{query}%'))
+    return cursor.fetchall()
+
+
+# back/src/database/repos_alumno.py
+
+def buscar_alumnos_por_nombre(texto_busqueda: str) -> List[Dict]:
     """
-    Obtiene todos los alumnos (para usar después)
+    Busca alumnos por nombre o apellido (búsqueda parcial)
+    Retorna lista de alumnos con sus datos básicos
     """
     conn = get_connection()
     alumnos = []
     
-    if not conn:
-        return alumnos
-    
     try:
         cur = conn.cursor()
+        
+        # Buscar en nomb_apel (que contiene nombre y apellido juntos)
+        # o buscar separando nombre y apellido si tu estructura lo permite
         query = """
             SELECT 
-                p.id,
+                a.id as alumno_id,
+                p.id as persona_id,
                 p.dni, 
                 p.nomb_apel,
+                p.telefono,
+                a.fecha_ing,
                 a.estado_activo
             FROM persona p
             JOIN alumno a ON p.id = a.id_persona
+            WHERE p.nomb_apel ILIKE %s
+               OR p.dni ILIKE %s
             ORDER BY p.nomb_apel
+            LIMIT 10
         """
-        cur.execute(query)
+        search_pattern = f'%{texto_busqueda}%'
+        cur.execute(query, (search_pattern, search_pattern))
         
         for row in cur.fetchall():
             alumnos.append({
-                'id': row[0],
-                'dni': row[1],
-                'nomb_apel': row[2],
-                'estado_activo': row[3]
+                'alumno_id': row[0],
+                'persona_id': row[1],
+                'dni': row[2],
+                'nomb_apel': row[3],
+                'telefono': row[4],
+                'fecha_ing': row[5],
+                'estado_activo': row[6]
             })
         
         cur.close()
         conn.close()
+        return alumnos
         
     except Exception as e:
-        print(f"❌ Error al obtener alumnos: {e}")
-    
-    return alumnos
+        print(f"Error al buscar alumnos por nombre: {e}")
+        if conn:
+            conn.close()
+        return []

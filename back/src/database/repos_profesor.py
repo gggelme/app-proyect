@@ -118,3 +118,15 @@ def obtener_todos_profesores() -> List[Dict]:
         print(f"❌ Error al obtener profesores: {e}")
     
     return profesores
+
+def buscar_por_nombre(self, query):
+    cursor = self.conn.cursor()
+    cursor.execute("""
+        SELECT id, nombre, apellido, alias 
+        FROM profesores 
+        WHERE activo = 1 
+          AND (LOWER(nombre) LIKE LOWER(?) OR LOWER(apellido) LIKE LOWER(?))
+        ORDER BY apellido, nombre
+        LIMIT 10
+    """, (f'%{query}%', f'%{query}%'))
+    return cursor.fetchall()

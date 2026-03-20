@@ -7,9 +7,9 @@ from decimal import Decimal
 @dataclass
 class Pago:
     id_alumno_cuota: int
-    mes_correspondiente: date           # Sin default, va primero
-    monto: Decimal                       # Sin default, va segundo
-    fecha_pago: Optional[datetime] = None  # Con default, va después
-    pagado_bool: bool = False             # Con default
-    metodo_pago: Optional[str] = None     # Con default
-    id: Optional[int] = None              # Con default
+    mes_correspondiente: date           # Mes al que corresponde el pago
+    descuento: Optional[Decimal] = None # Monto de descuento (opcional)
+    fecha_pago: Optional[datetime] = None  # Fecha cuando se pagó (NULL si no pagó)
+    pagado_bool: bool = False             # Estado del pago
+    metodo_pago: Optional[str] = None     # Método de pago (NULL si no pagó)
+    id: Optional[int] = None              # ID generado por la BD

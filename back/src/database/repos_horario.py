@@ -1,6 +1,6 @@
 # src/database/repos_horario.py
 from database.connection import get_connection
-from models.horario import Horario
+from models.horario import Horario # Asegurate de quitar hora_fin también en el modelo Horario
 from datetime import time
 
 class ErrorGuardarHorario(Exception):
@@ -9,7 +9,7 @@ class ErrorGuardarHorario(Exception):
 
 def guardar_horario(horario: Horario) -> int:
     """
-    Guarda un nuevo horario en la base de datos.
+    Guarda un nuevo horario en la base de datos (solo día y hora_init).
     Retorna el ID generado.
     """
     conn = get_connection()
@@ -19,15 +19,14 @@ def guardar_horario(horario: Horario) -> int:
     try:
         cur = conn.cursor()
         
-        # Insertar el horario
+        # Insertar el horario - SIN hora_fin
         query = """
-            INSERT INTO horario (dia, hora_init, hora_fin)
-            VALUES (%s, %s, %s) RETURNING id;
+            INSERT INTO horario (dia, hora_init)
+            VALUES (%s, %s) RETURNING id;
         """
         cur.execute(query, (
             horario.dia,
-            horario.hora_init,
-            horario.hora_fin
+            horario.hora_init
         ))
         
         id_generado = cur.fetchone()[0]
@@ -46,14 +45,9 @@ def guardar_horario(horario: Horario) -> int:
         
         if "duplicate key" in str(e).lower() or "ak_dia_hora" in str(e):
             raise ErrorGuardarHorario(f"Ya existe un horario para {horario.dia} a las {horario.hora_init}")
-        elif "not null" in str(e).lower():
-            raise ErrorGuardarHorario(f"Falta un campo obligatorio: {str(e)}")
         else:
             raise ErrorGuardarHorario(f"Error en la base de datos: {str(e)}")
-        
 
-
-# En repos_horario.py
 def obtener_todos_horarios():
     """Obtiene todos los horarios disponibles"""
     conn = get_connection()
@@ -61,14 +55,14 @@ def obtener_todos_horarios():
     
     try:
         cur = conn.cursor()
-        cur.execute("SELECT id, dia, hora_init, hora_fin FROM horario ORDER BY dia, hora_init")
+        # Quitamos hora_fin del SELECT
+        cur.execute("SELECT id, dia, hora_init FROM horario ORDER BY dia, hora_init")
         
         for row in cur.fetchall():
             horarios.append({
                 'id': row[0],
                 'dia': row[1],
-                'hora_init': str(row[2]),
-                'hora_fin': str(row[3])
+                'hora_init': str(row[2])
             })
         
         cur.close()
@@ -79,3 +73,35 @@ def obtener_todos_horarios():
     
     return horarios
 
+# back/src/database/repos_horario.py
+
+def obtener_horario_por_dia_y_hora(dia: str, hora: time) -> int:
+    """
+    Busca un horario existente por día y hora.
+    Retorna el ID si existe, None si no.
+    """
+    conn = get_connection()
+    if not conn:
+        return None
+    
+    try:
+        cur = conn.cursor()
+        
+        query = """
+            SELECT id FROM horario 
+            WHERE dia = %s AND hora_init = %s
+        """
+        cur.execute(query, (dia, hora))
+        
+        result = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+        
+        return result[0] if result else None
+        
+    except Exception as e:
+        print(f"Error al buscar horario: {e}")
+        if conn:
+            conn.close()
+        return None

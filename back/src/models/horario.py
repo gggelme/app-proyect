@@ -7,5 +7,4 @@ from datetime import time
 class Horario:
     dia: str
     hora_init: time
-    hora_fin: time
     id: Optional[int] = None

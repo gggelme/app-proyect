@@ -61,26 +61,9 @@ def obtener_todas_cuotas():
         return cuotas
     
     try:
-        cur = conn.cursor()
-        query = """
-            SELECT id, nombre, precio_cuota
-            FROM cuota
-            ORDER BY nombre
-        """
-        cur.execute(query)
-        
-        for row in cur.fetchall():
-            cuotas.append({
-                'id': row[0],
-                'nombre': row[1],
-                'precio_cuota': float(row[2]) if row[2] else 0
-            })
-        
-        cur.close()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, nombre, precio_cuota FROM cuota ORDER BY nombre")
+        cuotas = cursor.fetchall()
+        return [{"id": c[0], "nombre": c[1], "precio": c[2]} for c in cuotas]
+    finally:
         conn.close()
-        print(f"📋 Se obtuvieron {len(cuotas)} cuotas")
-        
-    except Exception as e:
-        print(f"❌ Error al obtener cuotas: {e}")
-    
-    return cuotas
