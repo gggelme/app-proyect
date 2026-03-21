@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class InscripcionService {
-  static const String baseUrl = 'http://192.168.1.129:8000/api';
+  static const String baseUrl = 'http://192.168.1.137:8000/api';
   
   Future<Map<String, dynamic>> crearInscripcion({
     required int idClase,

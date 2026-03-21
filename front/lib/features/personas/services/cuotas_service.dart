@@ -22,7 +22,7 @@ class CuotaModel {
 }
 
 class CuotasService {
-  static const String baseUrl = 'http://192.168.1.129:8000/api';
+  static const String baseUrl = 'http://192.168.1.137:8000/api';
 
   // Obtener todas las cuotas
   static Future<List<CuotaModel>> getCuotas() async {

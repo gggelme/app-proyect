@@ -1,7 +1,9 @@
+// lib/presentation/pagos/pages/pagos_page.dart
 import 'package:flutter/material.dart';
 import '../../models/pago_model.dart';
 import '../../services/pago_service.dart';
 import '../widgets/registrar_pago_dialog.dart';
+import 'editar_cuotas_page.dart'; // CAMBIAR EL IMPORT
 
 class PagosPage extends StatefulWidget {
   const PagosPage({super.key});
@@ -54,12 +56,22 @@ class _PagosPageState extends State<PagosPage> {
     });
   }
 
+  void _onEditPressed() {
+    // Navegar a la página de editar cuotas
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const EditarCuotasPage(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Pagos Pendientes'),
-        backgroundColor: const Color(0xFF87CEEB),
+        backgroundColor: const Color(0xFFE0F6FF),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -143,6 +155,11 @@ class _PagosPageState extends State<PagosPage> {
                     );
                   },
                 ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _onEditPressed,
+        backgroundColor: const Color(0xFF87CEEB),
+        child: const Icon(Icons.edit, color: Colors.white),
+      ),
     );
   }
 }

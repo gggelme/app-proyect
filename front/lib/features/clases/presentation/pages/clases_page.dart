@@ -39,8 +39,24 @@ class _ClasesPageState extends State<ClasesPage> {
   final ClasesService _clasesService = ClasesService();
 
   Future<void> _handleTapHora(String hora) async {
-
-    if (diaSeleccionado == null) return;
+    // Verificar si hay un día seleccionado
+    if (diaSeleccionado == null) {
+      // Mostrar mensaje de error intermitente
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⚠️ Por favor, selecciona un día primero'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      // Efecto intermitente en el header de días
+      setState(() {
+        // Esto activará un pequeño feedback visual
+      });
+      
+      return;
+    }
 
     // Toggle (cerrar si ya está abierta)
     if (horaExpandida == hora) {
@@ -89,33 +105,23 @@ class _ClasesPageState extends State<ClasesPage> {
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       body: Column(
-
         children: [
 
           /// BOTONES DE DIAS
           Padding(
             padding: const EdgeInsets.only(top: 20, bottom: 20),
-
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
               alignment: WrapAlignment.center,
-
               children: dias.map((dia) {
-
                 return FilterChip(
-
                   label: Text(dia),
-
                   selected: diaSeleccionado == dia,
-
                   onSelected: (selected) {
-
                     setState(() {
-
                       if (selected) {
                         diaSeleccionado = dia;
                         clasesPorHora.clear();
@@ -125,151 +131,114 @@ class _ClasesPageState extends State<ClasesPage> {
                         clasesPorHora.clear();
                         horaExpandida = null;
                       }
-
                     });
-
                   },
-
                   selectedColor: Colors.blue.shade100,
                   checkmarkColor: Colors.blue,
-
                 );
-
               }).toList(),
-
             ),
           ),
 
+          /// LISTA DE HORAS (SIEMPRE VISIBLE)
+          Expanded(
+            child: ListView.builder(
+              itemCount: horas.length,
+              itemBuilder: (context, index) {
+                final hora = horas[index];
+                final clases = clasesPorHora[hora];
+                final expandido = horaExpandida == hora;
+                final isDisabled = diaSeleccionado == null;
 
-          /// LISTA
-          if (diaSeleccionado != null)
-
-            Expanded(
-
-              child: ListView.builder(
-
-                itemCount: horas.length,
-
-                itemBuilder: (context, index) {
-
-                  final hora = horas[index];
-                  final clases = clasesPorHora[hora];
-                  final expandido = horaExpandida == hora;
-
-                  return Card(
-
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-
-                    child: Column(
-
-                      children: [
-
-                        ListTile(
-
-                          title: Text(
-                            hora,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w500,
-                            ),
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: Column(
+                    children: [
+                      ListTile(
+                        title: Text(
+                          hora,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                            color: isDisabled ? Colors.grey : Colors.black,
                           ),
-
-                          subtitle: !expandido
-                              ? const Text('Tocar para ver clases')
-                              : (clases == null
-                                  ? const Text('Cargando...')
-                                  : clases.isEmpty
-                                      ? const Text('Sin clases')
-                                      : Text('${clases.length} clase(s)')),
-
-                          trailing: Icon(
-                            expandido
-                                ? Icons.keyboard_arrow_up
-                                : Icons.keyboard_arrow_down,
-                          ),
-
-                          tileColor: Colors.grey.shade50,
-
-                          onTap: () => _handleTapHora(hora),
-
                         ),
-
-                        /// CONTENIDO EXPANDIDO
-                        if (expandido && clases != null)
-
-                          Column(
-
-                            children: clases.map((clase) {
-
-                              return Container(
-
-                                width: double.infinity,
-
-                                margin: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
+                        subtitle: !expandido
+                            ? Text(
+                                isDisabled 
+                                    ? '🔒 Selecciona un día para ver clases'
+                                    : 'Tocar para ver clases',
+                                style: TextStyle(
+                                  color: isDisabled ? Colors.grey : null,
                                 ),
+                              )
+                            : (clases == null
+                                ? const Text('Cargando...')
+                                : clases.isEmpty
+                                    ? const Text('Sin clases')
+                                    : Text('${clases.length} clase(s)')),
+                        trailing: Icon(
+                          expandido
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          color: isDisabled ? Colors.grey : null,
+                        ),
+                        tileColor: isDisabled ? Colors.grey.shade50 : Colors.grey.shade50,
+                        enabled: !isDisabled,
+                        onTap: () => _handleTapHora(hora),
+                      ),
 
-                                padding: const EdgeInsets.all(10),
-
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                    color: Colors.grey.shade300,
+                      /// CONTENIDO EXPANDIDO
+                      if (expandido && clases != null)
+                        Column(
+                          children: clases.map((clase) {
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade100,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: Colors.grey.shade300,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  /// Aula + profesor
+                                  Text(
+                                    "Aula ${clase.aula} - ${clase.profesor}",
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                ),
-
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-
-                                  children: [
-
-                                    /// Aula + profesor
-                                    Text(
-                                      "Aula ${clase.aula} - ${clase.profesor}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  const SizedBox(height: 6),
+                                  /// Alumnos
+                                  ...clase.alumnos.map(
+                                    (alumno) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text(alumno),
                                     ),
-
-                                    const SizedBox(height: 6),
-
-                                    /// Alumnos
-                                    ...clase.alumnos.map(
-                                          (alumno) => Padding(
-                                        padding: const EdgeInsets.only(bottom: 4),
-                                        child: Text(alumno),
-                                      ),
-                                    ),
-
-                                  ],
-
-                                ),
-
-                              );
-
-                            }).toList(),
-
-                          ),
-
-                      ],
-
-                    ),
-
-                  );
-
-                },
-
-              ),
-
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                    ],
+                  ),
+                );
+              },
             ),
-
+          ),
         ],
-
       ),
       // BOTÓN FLOTANTE
       floatingActionButton: FloatingActionButton(
@@ -285,7 +254,5 @@ class _ClasesPageState extends State<ClasesPage> {
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
-
   }
-
 }

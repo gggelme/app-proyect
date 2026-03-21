@@ -1,7 +1,7 @@
 # back/src/api/main_api.py
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import Any, Dict, List
 import sys
 import os
 
@@ -200,8 +200,11 @@ async def get_cuotas():
     """Obtiene todas las cuotas disponibles"""
     try:
         from database.repos_cuota import obtener_todas_cuotas
-        return obtener_todas_cuotas()
+        cuotas = obtener_todas_cuotas()
+        print(f"📊 Cuotas encontradas: {cuotas}")  # Para debug
+        return cuotas
     except Exception as e:
+        print(f"❌ Error en get_cuotas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
 
@@ -329,6 +332,36 @@ async def registrar_pago(data: dict):
         print(f"❌ Error en registrar_pago: {e}")
         import traceback
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+    # actualizacion cuotas
+
+@app.put("/api/cuotas")
+async def update_cuotas(cuotas: List[Dict[str, Any]]):
+    """
+    Actualiza múltiples cuotas
+    Espera un array de objetos con id y nuevo_precio
+    Ejemplo: [{"id": 1, "nuevo_precio": 16000}, {"id": 2, "nuevo_precio": 13000}]
+    """
+    try:
+        from database.repos_cuota import actualizar_precios_cuotas
+        
+        # Validar que cada objeto tenga los campos necesarios
+        for cuota in cuotas:
+            if "id" not in cuota or "nuevo_precio" not in cuota:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="Cada cuota debe tener 'id' y 'nuevo_precio'"
+                )
+        
+        resultado = actualizar_precios_cuotas(cuotas)
+        return resultado
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error en update_cuotas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

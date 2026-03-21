@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AlumnoService {
-  static const String baseUrl = 'http://192.168.1.129:8000/api'; 
+  static const String baseUrl = 'http://192.168.1.137:8000/api'; 
   
   Future<List<Map<String, dynamic>>> buscarAlumnosPorNombre(String texto) async {
     try {

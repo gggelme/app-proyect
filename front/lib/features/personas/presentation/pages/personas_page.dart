@@ -15,7 +15,11 @@ class _AlumnosPageState extends State<AlumnosPage> {
   int _selectedTab = 0; // 0 = Alumnos, 1 = Profesores
   List<AlumnoModel> _alumnos = [];
   List<ProfesorModel> _profesores = [];
+  List<AlumnoModel> _alumnosFiltrados = [];
+  List<ProfesorModel> _profesoresFiltrados = [];
   bool _isLoading = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -23,11 +27,18 @@ class _AlumnosPageState extends State<AlumnosPage> {
     _cargarAlumnos();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _cargarAlumnos() async {
     setState(() => _isLoading = true);
     final alumnos = await PersonasService.getAlumnos();
     setState(() {
       _alumnos = alumnos;
+      _alumnosFiltrados = alumnos;
       _isLoading = false;
     });
   }
@@ -37,17 +48,46 @@ class _AlumnosPageState extends State<AlumnosPage> {
     final profesores = await PersonasService.getProfesores();
     setState(() {
       _profesores = profesores;
+      _profesoresFiltrados = profesores;
       _isLoading = false;
     });
   }
 
   void _onTabChanged(int index) {
     setState(() => _selectedTab = index);
+    _searchController.clear();
+    _searchQuery = '';
     if (index == 0) {
       _cargarAlumnos();
     } else {
       _cargarProfesores();
     }
+  }
+
+  void _filterSearch(String query) {
+    setState(() {
+      _searchQuery = query;
+      
+      if (_selectedTab == 0) {
+        if (query.isEmpty) {
+          _alumnosFiltrados = _alumnos;
+        } else {
+          _alumnosFiltrados = _alumnos.where((alumno) =>
+            alumno.nombApel.toLowerCase().contains(query.toLowerCase()) ||
+            alumno.dni.contains(query)
+          ).toList();
+        }
+      } else {
+        if (query.isEmpty) {
+          _profesoresFiltrados = _profesores;
+        } else {
+          _profesoresFiltrados = _profesores.where((profesor) =>
+            profesor.nombApel.toLowerCase().contains(query.toLowerCase()) ||
+            (profesor.alias?.toLowerCase().contains(query.toLowerCase()) ?? false)
+          ).toList();
+        }
+      }
+    });
   }
 
   @override
@@ -67,6 +107,33 @@ class _AlumnosPageState extends State<AlumnosPage> {
             ),
           ),
           
+          // Barra de búsqueda
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: _selectedTab == 0 ? 'Buscar alumno...' : 'Buscar profesor...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _filterSearch('');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                filled: true,
+                fillColor: Colors.grey[50],
+              ),
+              onChanged: _filterSearch,
+            ),
+          ),
+          
           // Lista de alumnos o profesores
           Expanded(
             child: _isLoading
@@ -77,7 +144,6 @@ class _AlumnosPageState extends State<AlumnosPage> {
           ),
         ],
       ),
-      // 👇🏻 ESTO ES LO QUE HAY QUE AGREGAR (el botón flotante)
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           if (_selectedTab == 0) {
@@ -109,7 +175,6 @@ class _AlumnosPageState extends State<AlumnosPage> {
         backgroundColor: const Color(0xFF87CEEB),
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      // 👆🏻 HASTA ACÁ EL CÓDIGO NUEVO
     );
   }
 
@@ -143,17 +208,36 @@ class _AlumnosPageState extends State<AlumnosPage> {
   }
 
   Widget _buildAlumnosList() {
-    if (_alumnos.isEmpty) {
-      return const Center(
-        child: Text('No hay alumnos cargados'),
+    if (_alumnosFiltrados.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isEmpty
+                  ? 'No hay alumnos cargados'
+                  : 'No se encontraron resultados para "$_searchQuery"',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _alumnos.length,
+      itemCount: _alumnosFiltrados.length,
       itemBuilder: (context, index) {
-        final alumno = _alumnos[index];
+        final alumno = _alumnosFiltrados[index];
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 6),
           child: ListTile(
@@ -185,17 +269,36 @@ class _AlumnosPageState extends State<AlumnosPage> {
   }
 
   Widget _buildProfesoresList() {
-    if (_profesores.isEmpty) {
-      return const Center(
-        child: Text('No hay profesores cargados'),
+    if (_profesoresFiltrados.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isEmpty
+                  ? 'No hay profesores cargados'
+                  : 'No se encontraron resultados para "$_searchQuery"',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: _profesores.length,
+      itemCount: _profesoresFiltrados.length,
       itemBuilder: (context, index) {
-        final profesor = _profesores[index];
+        final profesor = _profesoresFiltrados[index];
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 6),
           child: ListTile(

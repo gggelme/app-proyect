@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/persona_model.dart';
 
 class PersonasService {
-  static const String baseUrl = 'http://192.168.1.129:8000/api';
+  static const String baseUrl = 'http://192.168.1.137:8000/api';
 
   static Future<List<AlumnoModel>> getAlumnos() async {
     try {

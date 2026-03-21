@@ -6,7 +6,7 @@ import '../models/horario_clases.dart';
 import '../../personas/models/persona_model.dart';
 
 class ClasesService {
-  final String baseUrl = 'http://192.168.1.129:8000/api'; 
+  final String baseUrl = 'http://192.168.1.137:8000/api'; 
 
   // Obtener clases por día y hora (para la vista existente)
   Future<List<Clase>> getClases(String dia, String hora) async {
