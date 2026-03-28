@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/pago_model.dart';
+import '../../../core/constants/api_config.dart';
 
 class PagoService {
-  static const String baseUrl = 'http://192.168.1.137:8000/api';
+  static const String baseUrl = ApiConfig.baseUrl;
 
   static Future<List<PagoPendienteModel>> getPagosPendientes() async {
     try {

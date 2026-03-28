@@ -176,3 +176,5 @@ def actualizar_precios_cuotas(cuotas_data: list) -> dict:
         }
     finally:
         conn.close()
+
+

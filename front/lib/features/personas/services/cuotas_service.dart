@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../core/constants/api_config.dart';
 
 class CuotaModel {
   final int id;
@@ -22,7 +23,7 @@ class CuotaModel {
 }
 
 class CuotasService {
-  static const String baseUrl = 'http://192.168.1.137:8000/api';
+  static const String baseUrl = ApiConfig.baseUrl;
 
   // Obtener todas las cuotas
   static Future<List<CuotaModel>> getCuotas() async {

@@ -3,6 +3,8 @@ import '../../services/personas_service.dart';
 import '../../models/persona_model.dart';
 import '../widgets/form_alumno.dart';
 import '../widgets/form_profesor.dart';
+import 'alumno_detail_page.dart';
+import 'profesor_detail_page.dart';
 
 class AlumnosPage extends StatefulWidget {
   const AlumnosPage({super.key});
@@ -241,6 +243,21 @@ class _AlumnosPageState extends State<AlumnosPage> {
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 6),
           child: ListTile(
+            onTap: () {
+              // Navegar a la página de detalle del alumno
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AlumnoDetailPage(
+                    alumno: alumno,
+                    onAlumnoActualizado: () {
+                      // Recargar la lista cuando se actualice el alumno
+                      if (_selectedTab == 0) _cargarAlumnos();
+                    },
+                  ),
+                ),
+              );
+            },
             leading: CircleAvatar(
               backgroundColor: const Color(0xFF87CEEB).withOpacity(0.2),
               child: Text(
@@ -259,9 +276,7 @@ class _AlumnosPageState extends State<AlumnosPage> {
               ),
             ),
             subtitle: Text('DNI: ${alumno.dni}'),
-            trailing: alumno.estadoActivo
-                ? const Icon(Icons.check_circle, color: Colors.green)
-                : const Icon(Icons.cancel, color: Colors.red),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
           ),
         );
       },
@@ -302,6 +317,21 @@ class _AlumnosPageState extends State<AlumnosPage> {
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 6),
           child: ListTile(
+            onTap: () {
+              // Navegar a la página de detalle del profesor
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProfesorDetailPage(
+                    profesor: profesor,
+                    onProfesorActualizado: () {
+                      // Recargar la lista cuando se actualice el profesor
+                      if (_selectedTab == 1) _cargarProfesores();
+                    },
+                  ),
+                ),
+              );
+            },
             leading: CircleAvatar(
               backgroundColor: const Color(0xFF87CEEB).withOpacity(0.2),
               child: Text(
@@ -322,10 +352,11 @@ class _AlumnosPageState extends State<AlumnosPage> {
             subtitle: profesor.alias != null 
                 ? Text('Alias: ${profesor.alias}')
                 : const Text('Profesor'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
           ),
         );
       },
     );
   }
+  
 }

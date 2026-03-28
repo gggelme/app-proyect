@@ -69,3 +69,100 @@ def guardar_alumno_cuota(id_alumno: int, id_cuota: int) -> int:
             raise ErrorGuardarAlumnoCuota(f"Error de referencia: {str(e)}")
         else:
             raise ErrorGuardarAlumnoCuota(f"Error en la base de datos: {str(e)}")
+
+# src/database/repos_alumno_cuota.py
+from database.connection import get_connection
+from typing import List, Dict
+
+def obtener_cuotas_por_alumno(id_alumno: int) -> List[Dict]:
+    """
+    Obtiene todas las cuotas asociadas a un alumno
+    Retorna lista de cuotas con información de la cuota y los pagos
+    """
+    print(f"🔍 Buscando cuotas para alumno ID: {id_alumno}")
+    conn = get_connection()
+    cuotas = []
+    
+    if not conn:
+        print("❌ No se pudo conectar a la base de datos")
+        return cuotas
+    
+    try:
+        cursor = conn.cursor()
+        
+        query = """
+            SELECT 
+                ac.id as alumno_cuota_id,
+                ac.id_alumno,
+                ac.id_cuota,
+                c.id as cuota_id,
+                c.nombre as cuota_nombre,
+                c.precio_cuota as cuota_precio_base,
+                p.id as pago_id,
+                p.fecha_pago,
+                p.pagado_bool,
+                p.mes_correspondiente,
+                p.metodo_pago
+            FROM alumno_cuota ac
+            JOIN cuota c ON ac.id_cuota = c.id
+            LEFT JOIN pago p ON ac.id = p.id_alumno_cuota
+            WHERE ac.id_alumno = %s
+            ORDER BY c.nombre, p.mes_correspondiente
+        """
+        
+        cursor.execute(query, (id_alumno,))
+        rows = cursor.fetchall()
+        
+        print(f"📊 Registros encontrados: {len(rows)}")
+        
+        # Diccionario para agrupar cuotas por id_cuota
+        cuotas_dict = {}
+        
+        for row in rows:
+            id_cuota = row[2]  # id_cuota
+            cuota_nombre = row[4]  # cuota_nombre
+            
+            # Si no existe la cuota en el diccionario, la creamos
+            if id_cuota not in cuotas_dict:
+                cuotas_dict[id_cuota] = {
+                    'id_alumno_cuota': row[0],
+                    'id_cuota': id_cuota,
+                    'nombre': cuota_nombre,
+                    'precio_base': float(row[5]) if row[5] else 0,
+                    'pagos': []
+                }
+            
+            # Si hay un pago asociado, lo agregamos
+            if row[6]:  # pago_id existe
+                cuotas_dict[id_cuota]['pagos'].append({
+                    'id_pago': row[6],
+                    'fecha_pago': row[7].isoformat() if row[7] else None,
+                    'pagado_bool': row[8] if row[8] is not None else False,
+                    'mes_correspondiente': row[9].strftime('%Y-%m') if row[9] else None,
+                    'metodo_pago': row[10]
+                })
+        
+        # Convertir el diccionario a lista
+        cuotas = list(cuotas_dict.values())
+        
+        # Ordenar cuotas por nombre
+        cuotas.sort(key=lambda x: x['nombre'])
+        
+        # Para cada cuota, ordenar pagos por mes
+        for cuota in cuotas:
+            if cuota['pagos']:
+                cuota['pagos'].sort(key=lambda x: x['mes_correspondiente'] if x['mes_correspondiente'] else '')
+        
+        cursor.close()
+        conn.close()
+        
+        print(f"✅ Encontradas {len(cuotas)} cuotas para alumno {id_alumno}")
+        return cuotas
+        
+    except Exception as e:
+        print(f"❌ Error al obtener cuotas del alumno: {e}")
+        import traceback
+        traceback.print_exc()
+        if conn:
+            conn.close()
+        return []

@@ -65,6 +65,8 @@ def guardar_alumno(alumno: Alumno) -> int:
             conn.rollback()
             conn.close()
         raise ErrorGuardarAlumno(f"Error en la base de datos: {str(e)}")
+    
+
 def buscar_alumnos(texto_busqueda: str = "") -> List[Dict]:
     conn = get_connection()
     alumnos = []
@@ -73,7 +75,6 @@ def buscar_alumnos(texto_busqueda: str = "") -> List[Dict]:
         cur = conn.cursor()
         
         if texto_busqueda and texto_busqueda.strip():
-            # Si hay texto de búsqueda, filtrar
             query = """
                 SELECT 
                     a.id as alumno_id,
@@ -81,6 +82,8 @@ def buscar_alumnos(texto_busqueda: str = "") -> List[Dict]:
                     p.dni, 
                     p.nomb_apel,
                     p.telefono,
+                    p.fecha_nac,
+                    p.domicilio,
                     a.fecha_ing,
                     a.estado_activo
                 FROM persona p
@@ -92,7 +95,6 @@ def buscar_alumnos(texto_busqueda: str = "") -> List[Dict]:
             search_pattern = f'%{texto_busqueda}%'
             cur.execute(query, (search_pattern, search_pattern))
         else:
-            # Si no hay texto, traer todos
             query = """
                 SELECT 
                     a.id as alumno_id,
@@ -100,6 +102,8 @@ def buscar_alumnos(texto_busqueda: str = "") -> List[Dict]:
                     p.dni, 
                     p.nomb_apel,
                     p.telefono,
+                    p.fecha_nac,
+                    p.domicilio,
                     a.fecha_ing,
                     a.estado_activo
                 FROM persona p
@@ -116,8 +120,10 @@ def buscar_alumnos(texto_busqueda: str = "") -> List[Dict]:
                 'dni': row[2],
                 'nomb_apel': row[3],
                 'telefono': row[4],
-                'fecha_ing': row[5],
-                'estado_activo': row[6]
+                'fecha_nac': row[5],
+                'domicilio': row[6],
+                'fecha_ing': row[7],
+                'estado_activo': row[8]
             })
         
         cur.close()
@@ -142,21 +148,13 @@ def buscar_por_nombre(self, query):
     return cursor.fetchall()
 
 
-# back/src/database/repos_alumno.py
-
 def buscar_alumnos_por_nombre(texto_busqueda: str) -> List[Dict]:
-    """
-    Busca alumnos por nombre o apellido (búsqueda parcial)
-    Retorna lista de alumnos con sus datos básicos
-    """
     conn = get_connection()
     alumnos = []
     
     try:
         cur = conn.cursor()
         
-        # Buscar en nomb_apel (que contiene nombre y apellido juntos)
-        # o buscar separando nombre y apellido si tu estructura lo permite
         query = """
             SELECT 
                 a.id as alumno_id,
@@ -164,6 +162,8 @@ def buscar_alumnos_por_nombre(texto_busqueda: str) -> List[Dict]:
                 p.dni, 
                 p.nomb_apel,
                 p.telefono,
+                p.fecha_nac,
+                p.domicilio,
                 a.fecha_ing,
                 a.estado_activo
             FROM persona p
@@ -178,13 +178,15 @@ def buscar_alumnos_por_nombre(texto_busqueda: str) -> List[Dict]:
         
         for row in cur.fetchall():
             alumnos.append({
-                'alumno_id': row[0],
+                'id': row[0],
                 'persona_id': row[1],
                 'dni': row[2],
                 'nomb_apel': row[3],
                 'telefono': row[4],
-                'fecha_ing': row[5],
-                'estado_activo': row[6]
+                'fecha_nac': row[5],
+                'domicilio': row[6],
+                'fecha_ing': row[7],
+                'estado_activo': row[8]
             })
         
         cur.close()
@@ -196,3 +198,98 @@ def buscar_alumnos_por_nombre(texto_busqueda: str) -> List[Dict]:
         if conn:
             conn.close()
         return []
+
+def actualizar_alumno(id_alumno: int, alumno_data: dict) -> bool:
+    """
+    Actualiza los datos de un alumno
+    Retorna True si se actualizó correctamente
+    """
+    conn = get_connection()
+    
+    if not conn:
+        print("❌ No se pudo conectar a la base de datos")
+        return False
+    
+    try:
+        cur = conn.cursor()
+        
+        # Primero obtenemos el id_persona del alumno
+        cur.execute("SELECT id_persona FROM alumno WHERE id = %s", (id_alumno,))
+        result = cur.fetchone()
+        
+        if not result:
+            print(f"❌ Alumno con ID {id_alumno} no encontrado")
+            return False
+        
+        id_persona = result[0]
+        
+        # Si se está cambiando el DNI, verificar que no esté en uso por otra persona
+        nuevo_dni = alumno_data.get('dni')
+        if nuevo_dni:
+            cur.execute("SELECT id FROM persona WHERE dni = %s AND id != %s", (nuevo_dni, id_persona))
+            existe = cur.fetchone()
+            if existe:
+                print(f"❌ El DNI {nuevo_dni} ya está siendo usado por otra persona")
+                conn.close()
+                return False
+        
+        # Construir la consulta dinámicamente según los campos que vienen
+        persona_updates = []
+        persona_values = []
+        
+        if 'nomb_apel' in alumno_data and alumno_data['nomb_apel'] is not None:
+            persona_updates.append("nomb_apel = %s")
+            persona_values.append(alumno_data['nomb_apel'])
+        
+        if 'dni' in alumno_data and alumno_data['dni'] is not None:
+            persona_updates.append("dni = %s")
+            persona_values.append(alumno_data['dni'])
+        
+        if 'fecha_nac' in alumno_data:
+            persona_updates.append("fecha_nac = %s")
+            persona_values.append(alumno_data['fecha_nac'])
+        
+        if 'domicilio' in alumno_data:
+            persona_updates.append("domicilio = %s")
+            persona_values.append(alumno_data['domicilio'])
+        
+        if 'telefono' in alumno_data:
+            persona_updates.append("telefono = %s")
+            persona_values.append(alumno_data['telefono'])
+        
+        if persona_updates:
+            persona_values.append(id_persona)
+            query_persona = f"UPDATE persona SET {', '.join(persona_updates)} WHERE id = %s"
+            cur.execute(query_persona, persona_values)
+        
+        # Actualizar datos en alumno
+        alumno_updates = []
+        alumno_values = []
+        
+        if 'fecha_ing' in alumno_data:
+            alumno_updates.append("fecha_ing = %s")
+            alumno_values.append(alumno_data['fecha_ing'])
+        
+        if 'estado_activo' in alumno_data:
+            alumno_updates.append("estado_activo = %s")
+            alumno_values.append(alumno_data['estado_activo'])
+        
+        if alumno_updates:
+            alumno_values.append(id_alumno)
+            query_alumno = f"UPDATE alumno SET {', '.join(alumno_updates)} WHERE id = %s"
+            cur.execute(query_alumno, alumno_values)
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        print(f"✅ Alumno ID {id_alumno} actualizado correctamente")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error al actualizar alumno: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return False
+

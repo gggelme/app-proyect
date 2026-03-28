@@ -11,11 +11,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Importar repositorios existentes
 from database.repos_alumno import guardar_alumno, buscar_alumnos, buscar_alumnos_por_nombre
 from database.repos_profesor import guardar_profesor, obtener_todos_profesores
+from database.repos_alumno_clase import *
 # Importar el nuevo repositorio
-from database.repos_horario_clase_consultas import (
-    obtener_clases_por_dia_y_hora,
-    ErrorConsultaHorarios
-)
+
 from models.persona import Alumno, Profesor
 
 from database.repos_alumno import buscar_alumnos_por_nombre
@@ -25,9 +23,10 @@ from database.repos_inscripcion import guardar_inscripcion_completa, ErrorGuarda
 
 from database.repos_cuota import obtener_todas_cuotas
 from database.repos_inscripcion_cuotas import guardar_inscripcion_completa_con_cuotas, ErrorGuardarInscripcionCuotas
-from database.repos_pago import registrar_pago_adelantado
 from database.repos_pago import obtener_pagos_pendientes_agrupados
 
+from models.clase import Clase
+from database.repos_clase import guardar_clase
 
 
 
@@ -152,7 +151,23 @@ async def buscar_alumnos_por_nombre_endpoint(texto: str):
         return buscar_alumnos_por_nombre(texto)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
+# ----- Enpoint tener alumnos
+
+@app.get("/api/alumnos", response_model=List[dict])
+async def get_alumnos():
+    """Obtiene todos los alumnos"""
+    try:
+        from database.repos_alumno import buscar_alumnos
+        alumnos = buscar_alumnos("")
+        print(f"📡 Endpoint /api/alumnos - Enviando {len(alumnos)} alumnos")
+        if alumnos:
+            print(f"📡 Primer alumno: {alumnos[0].get('nomb_apel')}, fecha_nac: {alumnos[0].get('fecha_nac')}")
+        return alumnos
+    except Exception as e:
+        print(f"❌ Error en endpoint: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ------------------- ENDPOINT PARA OBTENER TODAS LAS CLASES -------------------
 @app.get("/api/clases/todas")
@@ -363,6 +378,288 @@ async def update_cuotas(cuotas: List[Dict[str, Any]]):
     except Exception as e:
         print(f"❌ Error en update_cuotas: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+# ------------------- ENDPOINT DE CUOTAS POR ALUMNO -------------------
+
+@app.get("/api/alumnos/{id_alumno}/cuotas")
+async def get_cuotas_por_alumno(id_alumno: int):
+    """Obtiene todas las cuotas asociadas a un alumno"""
+    try:
+        from database.repos_alumno_cuota import obtener_cuotas_por_alumno
+        cuotas = obtener_cuotas_por_alumno(id_alumno)
+        return cuotas
+    except Exception as e:
+        print(f"❌ Error en get_cuotas_por_alumno: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+# ------------------- ENDPOINT PARA ACTUALIZAR PROFESOR -------------------
+
+@app.put("/api/profesores/{id_profesor}")
+async def actualizar_profesor(id_profesor: int, profesor: dict):
+    """Actualiza los datos de un profesor"""
+    try:
+        from database.repos_profesor import actualizar_profesor
+        resultado = actualizar_profesor(id_profesor, profesor)
+        
+        if resultado:
+            return {"status": "success", "message": "Profesor actualizado correctamente"}
+        else:
+            raise HTTPException(status_code=404, detail="Profesor no encontrado")
+            
+    except Exception as e:
+        print(f"❌ Error en actualizar_profesor: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+# ------------------- ENDPOINT PARA ACTUALIZAR ALUMNO -------------------
+
+@app.put("/api/alumnos/{id_alumno}")
+async def actualizar_alumno(id_alumno: int, alumno: dict):
+    """Actualiza los datos de un alumno"""
+    try:
+        from database.repos_alumno import actualizar_alumno
+        resultado = actualizar_alumno(id_alumno, alumno)
+        
+        if resultado:
+            return {"status": "success", "message": "Alumno actualizado correctamente"}
+        else:
+            raise HTTPException(status_code=404, detail="Alumno no encontrado")
+            
+    except Exception as e:
+        print(f"❌ Error en actualizar_alumno: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ------------------- ENDPOINT PARA ACTUALIZAR CUOTAS DEL ALUMNO -------------------
+
+@app.put("/api/alumnos/{id_alumno}/cuotas")
+async def actualizar_cuotas_alumno(id_alumno: int, data: dict):
+    """
+    Actualiza las cuotas de un alumno
+    Data esperado: {"ids_cuotas": [1, 2, 3]}
+    """
+    try:
+        from database.repos_alumno_cuota_update import actualizar_cuotas_alumno
+        
+        ids_cuotas = data.get("ids_cuotas", [])
+        
+        if not isinstance(ids_cuotas, list):
+            raise HTTPException(status_code=400, detail="ids_cuotas debe ser una lista")
+        
+        resultado = actualizar_cuotas_alumno(id_alumno, ids_cuotas)
+        
+        if resultado["success"]:
+            return {
+                "status": "success",
+                "message": f"Cuotas actualizadas: {resultado['eliminadas']} eliminadas, {resultado['agregadas']} agregadas",
+                "data": resultado
+            }
+        else:
+            raise HTTPException(status_code=500, detail=resultado.get("message", "Error al actualizar cuotas"))
+            
+    except Exception as e:
+        print(f"❌ Error en actualizar_cuotas_alumno: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+# ------------------- ENDPOINTS PARA EDICIÓN DE CLASES -------------------
+
+@app.get("/api/inscripciones")
+async def get_inscripciones_agrupadas():
+    """Obtiene todas las inscripciones agrupadas por alumno y clase"""
+    try:
+        from database.repos_alumno_clase_edicion import obtener_inscripciones_agrupadas
+        return obtener_inscripciones_agrupadas()
+    except Exception as e:
+        print(f"❌ Error en get_inscripciones_agrupadas: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/clases/{id_clase}/alumnos")
+async def get_alumnos_por_clase(id_clase: int):
+    """Obtiene todos los alumnos de una clase"""
+    try:
+        from database.repos_alumno_clase_edicion import obtener_alumnos_por_clase
+        return obtener_alumnos_por_clase(id_clase)
+    except Exception as e:
+        print(f"❌ Error en get_alumnos_por_clase: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/clases/{id_clase}/horarios")
+async def get_horarios_por_clase(id_clase: int):
+    """Obtiene todos los horarios de una clase"""
+    try:
+        from database.repos_alumno_clase_edicion import obtener_horarios_por_clase
+        return obtener_horarios_por_clase(id_clase)
+    except Exception as e:
+        print(f"❌ Error en get_horarios_por_clase: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+from pydantic import BaseModel
+
+# Crear un modelo Pydantic para la clase
+class ClaseCreate(BaseModel):
+    nombre_clase: str
+    id_profesor: int
+    duracion: int = 60
+
+@app.post("/api/clases")
+async def crear_clase(clase: ClaseCreate):  # ← Recibir como JSON body
+    """Crea una nueva clase"""
+    
+    try:
+        nueva_clase = Clase(
+            nombre_clase=clase.nombre_clase,
+            id_profesor=clase.id_profesor,
+            duracion=clase.duracion
+        )
+        
+        id_generado = guardar_clase(nueva_clase)
+        
+        return {
+            'status': 'success',
+            'message': 'Clase creada exitosamente',
+            'id': id_generado
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+# ------------------- ENDPOINT PARA ACTUALIZAR HORARIOS DE ALUMNO EN CLASE -------------------
+
+@app.put("/api/alumno-clase/horarios")
+async def actualizar_horarios_alumno_clase(data: dict):
+    """
+    Actualiza los horarios de un alumno en una clase específica
+    Data esperado: {
+        "alumno_id": int,
+        "clase_id": int,
+        "horarios": [{"dia": "Lunes", "hora": "09:00", "aula": "A"}, ...]
+    }
+    """
+    try:
+        print("\n" + "="*50)
+        print("📝 Actualizando horarios de alumno en clase")
+        print(f"   Alumno ID: {data.get('alumno_id')}")
+        print(f"   Clase ID: {data.get('clase_id')}")
+        print(f"   Horarios: {data.get('horarios')}")
+        print("="*50)
+        
+        # Importar la función del repositorio
+        from database.repos_alumno_clase_edicion import actualizar_horarios_alumno_clase
+        
+        # Actualizar en base de datos
+        success = actualizar_horarios_alumno_clase(
+            data.get('alumno_id'),
+            data.get('clase_id'),
+            data.get('horarios', [])
+        )
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Horarios actualizados correctamente"
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Error al actualizar los horarios"
+            )
+            
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
+# En main_api.py, agregar estos endpoints después de los existentes
+
+# ------------------- ENDPOINTS PARA EDICIÓN DE CLASES -------------------
+
+from database.repos_clase_edicion import (
+    obtener_todas_clases_completas,
+    actualizar_clase,
+    eliminar_clase,
+    ErrorActualizarClase,
+    ErrorEliminarClase
+)
+
+@app.get("/api/clases/editar/todas")
+async def get_todas_clases_para_editar():
+    """Obtiene todas las clases para editar"""
+    try:
+        return obtener_todas_clases_completas()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/clases/{id_clase}")
+async def update_clase(id_clase: int, data: dict):
+    """
+    Actualiza una clase existente
+    Data esperado: {"nombre_clase": "Nuevo nombre", "duracion": 90}
+    """
+    try:
+        nombre_clase = data.get("nombre_clase")
+        duracion = data.get("duracion")
+        
+        resultado = actualizar_clase(
+            id_clase=id_clase,
+            nombre_clase=nombre_clase,
+            duracion=duracion
+        )
+        
+        return {
+            "status": "success",
+            "message": "Clase actualizada correctamente"
+        }
+        
+    except ErrorActualizarClase as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/clases/{id_clase}")
+async def delete_clase(id_clase: int, confirm: bool = False):
+    """
+    Elimina una clase y todas sus inscripciones asociadas
+    Requiere confirm=true para ejecutar
+    """
+    if not confirm:
+        raise HTTPException(
+            status_code=400, 
+            detail="Se requiere confirmación. Enviar confirm=true"
+        )
+    
+    try:
+        resultado = eliminar_clase(id_clase)
+        return resultado
+        
+    except ErrorEliminarClase as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# En main_api.py, agregar este endpoint
+
+from database.repos_alumno_clase_edicion import obtener_todas_sesiones_agrupadas
+
+@app.get("/api/sesiones/agrupadas")
+async def get_sesiones_agrupadas():
+    """Obtiene todas las sesiones agrupadas por alumno y clase"""
+    try:
+        return obtener_todas_sesiones_agrupadas()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
 
 
 # Para correr directamente

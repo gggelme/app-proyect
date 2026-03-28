@@ -1,12 +1,13 @@
 class AlumnoModel {
-  final int id;
-  final int personaId;
-  final String dni;
-  final String nombApel;
-  final String? telefono;
-  final String? fechaNac;
-  final String? fechaIng;
-  final bool estadoActivo;
+  int id;
+  int personaId;
+  String dni;
+  String nombApel;
+  String? telefono;
+  String? fechaNac;
+  String? fechaIng;
+  bool estadoActivo;
+  String? domicilio;  // <-- Agregar domicilio
 
   AlumnoModel({
     required this.id,
@@ -17,6 +18,7 @@ class AlumnoModel {
     this.fechaNac,
     this.fechaIng,
     required this.estadoActivo,
+    this.domicilio,  // <-- Agregar aquí
   });
 
   factory AlumnoModel.fromJson(Map<String, dynamic> json) {
@@ -29,19 +31,21 @@ class AlumnoModel {
       fechaNac: json['fecha_nac'],
       fechaIng: json['fecha_ing'],
       estadoActivo: json['estado_activo'] ?? true,
+      domicilio: json['domicilio'],  // <-- Agregar aquí
     );
   }
 }
 
 class ProfesorModel {
-  final int id;
-  final int personaId;
-  final String dni;
-  final String nombApel;
-  final String? telefono;
-  final String? fechaNac;
-  final String? alias;
-  final String? email;
+  int id;
+  int personaId;
+  String dni;
+  String nombApel;
+  String? telefono;
+  String? fechaNac;
+  String? alias;
+  String? email;
+  String? domicilio;  // <-- Agregar este campo
 
   ProfesorModel({
     required this.id,
@@ -52,6 +56,7 @@ class ProfesorModel {
     this.fechaNac,
     this.alias,
     this.email,
+    this.domicilio,  // <-- Agregar aquí
   });
 
   factory ProfesorModel.fromJson(Map<String, dynamic> json) {
@@ -64,6 +69,7 @@ class ProfesorModel {
       fechaNac: json['fecha_nac'],
       alias: json['alias'],
       email: json['email'],
+      domicilio: json['domicilio'],  // <-- Agregar aquí
     );
   }
 }

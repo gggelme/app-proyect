@@ -69,8 +69,8 @@ def guardar_profesor(profe: Profesor) -> int:
 
 def obtener_todos_profesores() -> List[Dict]:
     """
-    Obtiene todos los profesores con sus datos completos.
-    Retorna una lista de diccionarios con la información.
+    Obtiene todos los profesores con sus datos.
+    IMPORTANTE: Devuelve el id de la tabla profesor (no el de persona)
     """
     conn = get_connection()
     profesores = []
@@ -82,42 +82,37 @@ def obtener_todos_profesores() -> List[Dict]:
         cur = conn.cursor()
         query = """
             SELECT 
-                p.id,
-                p.dni, 
+                pr.id as profesor_id,  -- ← ESTE es el que necesitas para clase
+                p.id as persona_id,
                 p.nomb_apel,
-                p.fecha_nac,
-                p.domicilio,
-                p.telefono,
-                p.fecha_registro,
+                p.dni,
                 pr.alias,
                 pr.email
-            FROM persona p
-            JOIN profesor pr ON p.id = pr.id_persona
+            FROM profesor pr
+            JOIN persona p ON pr.id_persona = p.id
             ORDER BY p.nomb_apel
         """
         cur.execute(query)
         
         for row in cur.fetchall():
             profesores.append({
-                'id': row[0],
-                'dni': row[1],
+                'id': row[0],           # ← profesor_id (para clase.id_profesor)
+                'persona_id': row[1],   # ← persona_id (para otros usos)
                 'nomb_apel': row[2],
-                'fecha_nac': row[3],
-                'domicilio': row[4],
-                'telefono': row[5],
-                'fecha_registro': row[6],
-                'alias': row[7],
-                'email': row[8]
+                'dni': row[3],
+                'alias': row[4],
+                'email': row[5]
             })
         
         cur.close()
         conn.close()
-        print(f"📋 Se obtuvieron {len(profesores)} profesores")
+        return profesores
         
     except Exception as e:
         print(f"❌ Error al obtener profesores: {e}")
-    
-    return profesores
+        if conn:
+            conn.close()
+        return []
 
 def buscar_por_nombre(self, query):
     cursor = self.conn.cursor()
@@ -130,3 +125,98 @@ def buscar_por_nombre(self, query):
         LIMIT 10
     """, (f'%{query}%', f'%{query}%'))
     return cursor.fetchall()
+
+
+def actualizar_profesor(id_profesor: int, profesor_data: dict) -> bool:
+    """
+    Actualiza los datos de un profesor
+    Retorna True si se actualizó correctamente
+    """
+    conn = get_connection()
+    
+    if not conn:
+        print("❌ No se pudo conectar a la base de datos")
+        return False
+    
+    try:
+        cur = conn.cursor()
+        
+        # Primero obtenemos el id_persona del profesor
+        cur.execute("SELECT id_persona FROM profesor WHERE id = %s", (id_profesor,))
+        result = cur.fetchone()
+        
+        if not result:
+            print(f"❌ Profesor con ID {id_profesor} no encontrado")
+            return False
+        
+        id_persona = result[0]
+        
+        # Si se está cambiando el DNI, verificar que no esté en uso por otra persona
+        nuevo_dni = profesor_data.get('dni')
+        if nuevo_dni:
+            cur.execute("SELECT id FROM persona WHERE dni = %s AND id != %s", (nuevo_dni, id_persona))
+            existe = cur.fetchone()
+            if existe:
+                print(f"❌ El DNI {nuevo_dni} ya está siendo usado por otra persona")
+                conn.close()
+                return False
+        
+        # Construir la consulta dinámicamente según los campos que vienen
+        persona_updates = []
+        persona_values = []
+        
+        if 'nomb_apel' in profesor_data and profesor_data['nomb_apel'] is not None:
+            persona_updates.append("nomb_apel = %s")
+            persona_values.append(profesor_data['nomb_apel'])
+        
+        if 'dni' in profesor_data and profesor_data['dni'] is not None:
+            persona_updates.append("dni = %s")
+            persona_values.append(profesor_data['dni'])
+        
+        if 'fecha_nac' in profesor_data:
+            persona_updates.append("fecha_nac = %s")
+            persona_values.append(profesor_data['fecha_nac'])
+        
+        if 'domicilio' in profesor_data:
+            persona_updates.append("domicilio = %s")
+            persona_values.append(profesor_data['domicilio'])
+        
+        if 'telefono' in profesor_data:
+            persona_updates.append("telefono = %s")
+            persona_values.append(profesor_data['telefono'])
+        
+        if persona_updates:
+            persona_values.append(id_persona)
+            query_persona = f"UPDATE persona SET {', '.join(persona_updates)} WHERE id = %s"
+            cur.execute(query_persona, persona_values)
+        
+        # Actualizar datos en profesor
+        profesor_updates = []
+        profesor_values = []
+        
+        if 'alias' in profesor_data:
+            profesor_updates.append("alias = %s")
+            profesor_values.append(profesor_data['alias'])
+        
+        if 'email' in profesor_data:
+            profesor_updates.append("email = %s")
+            profesor_values.append(profesor_data['email'])
+        
+        if profesor_updates:
+            profesor_values.append(id_profesor)
+            query_profesor = f"UPDATE profesor SET {', '.join(profesor_updates)} WHERE id = %s"
+            cur.execute(query_profesor, profesor_values)
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        print(f"✅ Profesor ID {id_profesor} actualizado correctamente")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error al actualizar profesor: {e}")
+        if conn:
+            conn.rollback()
+            conn.close()
+        return False

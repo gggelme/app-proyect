@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 from typing import Optional
 from datetime import date, datetime
+from decimal import Decimal
 
 @dataclass
 class Persona:
@@ -11,12 +12,15 @@ class Persona:
     domicilio: Optional[str] = None
     telefono: Optional[str] = None
     fecha_registro: Optional[datetime] = None
+    descuento: Optional[Decimal] = None  # ✅ Nuevo campo descuento
     id: Optional[int] = None
+
 
 @dataclass
 class Alumno(Persona):
     fecha_ing: Optional[date] = None
     estado_activo: bool = True
+
 
 @dataclass
 class Profesor(Persona):
